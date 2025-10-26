@@ -53,6 +53,10 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon name="user-circle" color={color} />,
         }}
       />
+      {/* Hidden but navigable screens */}
+      <Tabs.Screen name="settings" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="about" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="forgot-password" options={{ href: null, headerShown: false }} />
     </Tabs>
   );
 }

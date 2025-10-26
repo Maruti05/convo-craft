@@ -24,7 +24,7 @@ export function Screen({ children, backgroundColor, keyboardVerticalOffset = 0, 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={keyboardVerticalOffset}
       >
-        <View style={[styles.flex, contentStyle]}> {children} </View>
+        <View style={[styles.flex, contentStyle]}>{children}</View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

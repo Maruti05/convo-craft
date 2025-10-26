@@ -22,6 +22,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Ensure a profile record exists for this user with appropriate names
+  async function ensureProfile(u: User) {
+    try {
+      const email = (u.email as string | undefined) ?? '';
+      const firstName = String((u.user_metadata as any)?.firstName ?? (u.user_metadata as any)?.first_name ?? '').trim();
+      const lastName = String((u.user_metadata as any)?.lastName ?? (u.user_metadata as any)?.last_name ?? '').trim();
+      const displayName = `${firstName} ${lastName}`.trim() || (email ? email.split('@')[0] : 'User');
+      const avatarUrl = ((u.user_metadata as any)?.avatar_url as string | undefined) ?? null;
+      await supabase.from('profiles').upsert({
+        id: u.id,
+        email,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        display_name: displayName,
+        avatar_url: avatarUrl,
+      }, { onConflict: 'id' });
+      logger.info('ensureProfile upserted', { userId: u.id, displayName });
+    } catch (e) {
+      logger.warn('ensureProfile failed', e);
+    }
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -36,10 +58,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       logger.info('Auth state change', { event });
       setSession(newSession);
       setUser(newSession?.user ?? null);
+      // Ensure profile exists on sign-in or user update
+      if (newSession?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+        await ensureProfile(newSession.user);
+      }
     });
 
     return () => {
@@ -74,6 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (error) throw error;
       logger.info('signUp success', { userId: result.user?.id });
+      if (result.user) {
+        await ensureProfile(result.user);
+      }
     } catch (e: any) {
       logger.warn('signUp failed');
       setError(e?.message ?? 'Registration failed');
